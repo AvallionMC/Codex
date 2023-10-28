@@ -34,7 +34,7 @@ public class JugadorListener implements Listener{
 	public JugadorListener(Codex plugin) {
 		this.plugin = plugin;
 	}
-	
+
 	@EventHandler
 	public void alEntrarARegion(WorldGuardAPIRegionEnterEvent event) {
 		final Player jugador = event.getPlayer();
@@ -58,58 +58,66 @@ public class JugadorListener implements Listener{
 			}
 		}
 	}
-	
-	@EventHandler
-	public void alMatarMob(EntityDeathEvent event) {
-		LivingEntity e = event.getEntity();
-		final Player jugador = e.getKiller();
-		String nombreEntidad = null;
-		if(e.getCustomName() != null) {
-			nombreEntidad = ChatColor.stripColor(e.getCustomName());
-		}
-		if(jugador != null) {
-			ArrayList<CategoriaCodex> categorias = plugin.getCategoriasManager().getCategorias();
-			for(final CategoriaCodex categoria : categorias) {
-				List<EntradaCodex> entradas = categoria.getEntradas();
-				for(final EntradaCodex entrada : entradas) {
-					EntradaCodexOpcionesMobKill opcionesMobKill = entrada.getDiscoveredOnMobKill();
-					if(opcionesMobKill != null) {
-						String nombre = opcionesMobKill.getNombre();
-						String tipo = opcionesMobKill.getType();
-						boolean pasa = false;
-						if(nombre == null) {
-							//Solo el tipo debe ser igual
-							if(e.getType().name().equals(tipo)) {
-								pasa = true;
-							}
-						}else if(tipo == null) {
-							//Solo el nombre debe ser igual
-							if(nombreEntidad != null && nombreEntidad.startsWith(nombre)) {
-								pasa = true;
-							}
-						}else {
-							//El nombre y el tipo deben ser iguales
-							if(nombreEntidad != null && nombreEntidad.startsWith(nombre)
-									&& e.getType().name().equals(tipo)) {
-								pasa = true;
-							}
-						}
-						if(pasa) {
-							plugin.getJugadorDataManager().agregarEntrada(jugador, categoria.getPath(), entrada.getId(), new AgregarEntradaCallback() {
-								@Override
-								public void onDone(boolean agrega) {
-									if(agrega) {
-										plugin.getCodexManager().desbloquearEntrada(jugador, categoria, entrada);
-									}
-								}
-							});
-						}
-					}
-				}
-			}
-		}
-	}
-	
+
+
+@EventHandler
+public void alMatarMob(EntityDeathEvent event) {
+    LivingEntity e = event.getEntity();
+    final Player jugador = e.getKiller();
+    String nombreEntidad = null;
+    if (e.getCustomName() != null) {
+        nombreEntidad = ChatColor.stripColor(e.getCustomName());
+    }
+    if (jugador != null) {
+        ArrayList<CategoriaCodex> categorias = plugin.getCategoriasManager().getCategorias();
+        for (final CategoriaCodex categoria : categorias) {
+            List<EntradaCodex> entradas = categoria.getEntradas();
+            for (final EntradaCodex entrada : entradas) {
+                EntradaCodexOpcionesMobKill opcionesMobKill = entrada.getDiscoveredOnMobKill();
+                if (opcionesMobKill != null) {
+                    String nombre = opcionesMobKill.getNombre();
+                    String tipo = opcionesMobKill.getType();
+                    boolean pasa = false;
+                    if (tipo == null || tipo.equals("*")) {
+                        // Wildcard for type, only the name should match
+                        if (nombreEntidad != null && nombreEntidad.endsWith(nombre)) {
+                            pasa = true;
+                        }
+                    } else if (nombre == null || nombre.equals("*")) {
+                        // Wildcard for name, only the type should match
+                        if (e.getType().name().equals(tipo)) {
+                            pasa = true;
+                        }
+                    } else if (nombre.startsWith("*")) {
+                        // Wildcard within the name, matches entities ending with the specified name
+                        String partialName = nombre.substring(1); // Remove the leading *
+                        if (nombreEntidad != null && nombreEntidad.endsWith(partialName)) {
+                            pasa = true;
+                        }
+                    } else {
+                        // Both name and type must match
+                        if (nombreEntidad != null && nombreEntidad.equals(nombre)
+                                && e.getType().name().equals(tipo)) {
+                            pasa = true;
+                        }
+                    }
+                    if (pasa) {
+                        plugin.getJugadorDataManager().agregarEntrada(jugador, categoria.getPath(), entrada.getId(), new AgregarEntradaCallback() {
+                            @Override
+                            public void onDone(boolean agrega) {
+                                if (agrega) {
+                                    plugin.getCodexManager().desbloquearEntrada(jugador, categoria, entrada);
+                                }
+                            }
+                        });
+                    }
+                }
+            }
+        }
+    }
+}
+
+
 	@EventHandler
 	public void alSalir(PlayerQuitEvent event) {
 		Player jugador = event.getPlayer();
@@ -118,13 +126,13 @@ public class JugadorListener implements Listener{
 			plugin.getWorldGuardAPI().removerJugador(jugador.getName());
 		}
 	}
-	
+
 	@EventHandler
 	public void alCerrarInventario(InventoryCloseEvent event) {
 		Player jugador = (Player) event.getPlayer();
 		plugin.getInventarioManager().eliminarJugadorInventario(jugador.getName());
 	}
-	
+
 	@EventHandler
 	public void alClickearInventario(InventoryClickEvent event) {
 		Player jugador = (Player) event.getWhoClicked();
@@ -147,7 +155,7 @@ public class JugadorListener implements Listener{
 					if(invCodex == null) {
 						return;
 					}
-					
+
 					for(ItemInventarioCodex itemCodex : invCodex.getItems()) {
 						List<Integer> slots = itemCodex.getSlots();
 						for(int slotItem : slots) {
